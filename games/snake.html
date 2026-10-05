@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>贪吃蛇</title>
+<!--
+  游戏：贪吃蛇
+  玩法：吃食物变长，撞墙或咬到自己结束，吃到食物逐渐加速
+  操作：方向键 / WASD 移动，空格暂停；手机上下左右滑动转向
+-->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(160deg, #0f172a, #1e293b); font-family: system-ui, "Microsoft YaHei", sans-serif; color: #e2e8f0;
+  }
+  .wrap { position: relative; text-align: center; padding: 16px; }
+  h1 { font-size: 22px; margin-bottom: 10px; letter-spacing: 2px; }
+  .hud { display: flex; justify-content: space-between; max-width: 420px; margin: 0 auto 8px; font-size: 14px; color: #94a3b8; }
+  .hud b { color: #4ade80; font-size: 16px; }
+  canvas {
+    display: block; width: min(420px, 92vw); aspect-ratio: 1;
+    background: #0b1220; border: 1px solid #334155; border-radius: 10px; touch-action: none;
+  }
+  .tip { margin-top: 10px; font-size: 12px; color: #64748b; }
+  .overlay {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(11, 18, 32, .72); border-radius: 12px; visibility: hidden;
+  }
+  .overlay.show { visibility: visible; }
+  .panel p { margin-bottom: 14px; font-size: 16px; }
+  button {
+    padding: 9px 26px; border: 0; border-radius: 8px; font-size: 15px; cursor: pointer;
+    background: #4ade80; color: #052e16; font-weight: bold;
+  }
+  button:hover { background: #86efac; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🐍 贪吃蛇</h1>
+  <div class="hud"><span>得分 <b id="score">0</b></span><span>最高分 <b id="best">0</b></span></div>
+  <canvas id="board" width="420" height="420"></canvas>
+  <p class="tip">方向键 / WASD 移动 · 空格暂停 · 手机滑动转向</p>
+  <div id="overlay" class="overlay show">
+    <div class="panel">
+      <p id="msg">准备好了吗？</p>
+      <button id="btn">开始游戏</button>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  const COLS = 20, ROWS = 20, CELL = 420 / COLS;
+  const cvs = document.getElementById('board'), ctx = cvs.getContext('2d');
+  const $score = document.getElementById('score'), $best = document.getElementById('best');
+  const $overlay = document.getElementById('overlay'), $msg = document.getElementById('msg'), $btn = document.getElementById('btn');
+
+  const BEST_KEY = 'snake_best';
+  let snake, dir, dirQueue, food, score, best, speed, timer, state; // state: idle | running | paused | over
+  best = +(localStorage.getItem(BEST_KEY) || 0);
+  $best.textContent = best;
+
+  const DIRS = { up: {x: 0, y: -1}, down: {x: 0, y: 1}, left: {x: -1, y: 0}, right: {x: 1, y: 0} };
+  const opposite = (a, b) => a.x === -b.x && a.y === -b.y;
+
+  function reset() {
+    snake = [{x: 9, y: 10}, {x: 8, y: 10}, {x: 7, y: 10}];
+    dir = DIRS.right; dirQueue = []; score = 0; speed = 140;
+    $score.textContent = 0;
+    spawnFood();
+    draw();
+  }
+
+  function spawnFood() {
+    do {
+      food = {x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS)};
+    } while (snake.some(s => s.x === food.x && s.y === food.y));
+  }
+
+  function start() {
+    reset();
+    state = 'running';
+    $overlay.classList.remove('show');
+    clearInterval(timer);
+    timer = setInterval(tick, speed);
+  }
+
+  function tick() {
+    // 从方向队列取一个合法方向（防一帧内连按两键导致 180 度掉头）
+    while (dirQueue.length) {
+      const d = dirQueue.shift();
+      if (!opposite(d, dir) && (d.x !== dir.x || d.y !== dir.y)) { dir = d; break; }
+    }
+    const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+    const hitWall = head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS;
+    const hitSelf = snake.some(s => s.x === head.x && s.y === head.y);
+    if (hitWall || hitSelf) return gameOver();
+
+    snake.unshift(head);
+    if (head.x === food.x && head.y === food.y) {
+      score++;
+      $score.textContent = score;
+      if (speed > 70) { speed -= 3; clearInterval(timer); timer = setInterval(tick, speed); }
+      spawnFood();
+    } else {
+      snake.pop();
+    }
+    draw();
+  }
+
+  function gameOver() {
+    clearInterval(timer);
+    state = 'over';
+    if (score > best) { best = score; localStorage.setItem(BEST_KEY, best); $best.textContent = best; }
+    $msg.textContent = `游戏结束！本局得分 ${score}`;
+    $btn.textContent = '再来一局';
+    $overlay.classList.add('show');
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, 420, 420);
+    // 网格
+    ctx.strokeStyle = 'rgba(51, 65, 85, .35)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < COLS; i++) {
+      ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, 420); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(420, i * CELL); ctx.stroke();
+    }
+    // 食物
+    ctx.fillStyle = '#f87171';
+    ctx.beginPath();
+    ctx.arc(food.x * CELL + CELL / 2, food.y * CELL + CELL / 2, CELL * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+    // 蛇身（头部更亮）
+    snake.forEach((s, i) => {
+      const r = 5, x = s.x * CELL + 2, y = s.y * CELL + 2, w = CELL - 4;
+      ctx.fillStyle = i === 0 ? '#86efac' : '#4ade80';
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, w, r);
+      ctx.fill();
+    });
+  }
+
+  function turn(name) {
+    if (state === 'idle' || state === 'over') { start(); return; }
+    if (state === 'paused') return togglePause();
+    if (dirQueue.length < 2) dirQueue.push(DIRS[name]);
+  }
+
+  function togglePause() {
+    if (state === 'running') {
+      state = 'paused'; clearInterval(timer);
+      $msg.textContent = '已暂停'; $btn.textContent = '继续'; $overlay.classList.add('show');
+    } else if (state === 'paused') {
+      state = 'running'; $overlay.classList.remove('show');
+      timer = setInterval(tick, speed);
+    }
+  }
+
+  const KEY_MAP = {
+    ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
+    ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right'
+  };
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); togglePause(); return; }
+    const name = KEY_MAP[e.code];
+    if (name) { e.preventDefault(); turn(name); }
+  });
+
+  // 手机滑动转向
+  let sx = 0, sy = 0;
+  cvs.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, {passive: true});
+  cvs.addEventListener('touchmove', e => e.preventDefault(), {passive: false});
+  cvs.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+    turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+  });
+
+  $btn.addEventListener('click', () => {
+    if (state === 'paused') togglePause(); else start();
+  });
+
+  state = 'idle';
+  reset();
+})();
+</script>
+</body>
+</html>

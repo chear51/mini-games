@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 小游戏合集</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh; padding: 40px 16px;
+    background: linear-gradient(160deg, #0f172a, #1e293b);
+    font-family: system-ui, "Microsoft YaHei", sans-serif; color: #e2e8f0;
+  }
+  header { text-align: center; margin-bottom: 32px; }
+  h1 { font-size: 28px; letter-spacing: 2px; }
+  header p { margin-top: 8px; color: #94a3b8; font-size: 14px; }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px; max-width: 900px; margin: 0 auto;
+  }
+  .card {
+    display: block; padding: 20px; border-radius: 14px; text-decoration: none;
+    background: rgba(30, 41, 59, .8); border: 1px solid #334155; color: inherit;
+    transition: transform .15s, border-color .15s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: #4ade80; }
+  .emoji { font-size: 34px; }
+  .card h2 { font-size: 17px; margin: 10px 0 6px; }
+  .card p { font-size: 13px; color: #94a3b8; line-height: 1.5; }
+  footer { text-align: center; margin-top: 40px; font-size: 12px; color: #475569; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎮 小游戏合集</h1>
+  <p>纯前端 · 零依赖 · 点开即玩</p>
+</header>
+<main class="grid">
+  <!-- 新游戏登记处：复制下面这张卡片，改链接 / emoji / 名称 / 简介 四处即可 -->
+  <a class="card" href="games/snake.html">
+    <div class="emoji">🐍</div>
+    <h2>贪吃蛇</h2>
+    <p>经典怀旧。吃食物变长、越吃越快，支持键盘与手机滑动。</p>
+  </a>
+</main>
+<footer>由 Codex 云端协作开发 · <a href="https://github.com/chear51/mini-games" style="color:inherit">GitHub 仓库</a></footer>
+</body>
+</html>
